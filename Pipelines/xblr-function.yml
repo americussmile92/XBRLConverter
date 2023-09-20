@@ -7,42 +7,28 @@ pool:
   vmImage: 'windows-2022'
 
 variables:
-  project: 'XBRLConverter/XBRLConverter/XBRLConverter.csproj'
+  project: '**/*.csproj'
   buildPlatform: 'Any CPU'
 
 steps:
-- task: UseDotNet@2
-  displayName: Use .NET 
-  inputs: 
-    packageType: 'sdk'
-    version: 6.x
-    vsVersion: 17.0.x
-
-- task: NuGetToolInstaller@0
-  displayName: 'Use NuGet 4.4.1'
-  inputs:
-    versionSpec: 4.4.1
-
 - task: DotNetCoreCLI@2
   displayName: 'Build solution'
   inputs:
     command: build
     projects: '$(project)'
-    arguments: '--configuration $(buildConfiguration)'
+    arguments: '--output $(Build.BinariesDirectory)/publish_output --configuration Release'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Publish'
+- task: ArchiveFiles@2
   inputs:
-    command: publish
-    projects: '$(project)'
-    publishWebProjects: False
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-    zipAfterPublish: True
-    includesymbols: False
-    modifyOutputPath: True
+    rootFolderOrFile: '$(Build.BinariesDirectory)/publish_output'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+    replaceExistingArchive: true
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact'
   inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
-    ArtifactName: 'xblr.converter.drop'
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
