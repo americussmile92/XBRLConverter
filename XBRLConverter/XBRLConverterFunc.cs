@@ -17,11 +17,12 @@ namespace XBRLConverter
         [FunctionName("XBRLConverterFunc")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = "{templateId}")] HttpRequest req, string templateId,
-            ILogger log)
+            ILogger log,
+            ExecutionContext context)
         {
             // the request body needs to contains all the key similar to the tag in the xml template
             log.LogInformation("Getting the template");
-            var template = GetTemplate(templateId);
+            var template = GetTemplate(templateId, context);
             if (template == null)
             {
                 return new BadRequestObjectResult($"Template {templateId} is not supported");
@@ -45,7 +46,7 @@ namespace XBRLConverter
             return new ContentResult() { Content = template.InnerXml, ContentType = "text/xml" };
         }
 
-        public static XmlDocument GetTemplate(string templateId)
+        public static XmlDocument GetTemplate(string templateId, ExecutionContext context)
         {
             XmlDocument doc = new XmlDocument();
             string fileName = String.Empty;
@@ -57,8 +58,9 @@ namespace XBRLConverter
                 default:
                     break;
             }
+            var templatePath = Path.Combine(context.FunctionAppDirectory, "Templates", $"{fileName}.xml");
             if (String.IsNullOrEmpty(fileName)) return null;
-            doc.Load($"./Templates/{fileName}.xml");
+            doc.Load(templatePath);
             return doc;
         }
     }
