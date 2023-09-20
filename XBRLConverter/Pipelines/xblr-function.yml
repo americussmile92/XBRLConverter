@@ -7,7 +7,7 @@ pool:
   vmImage: 'windows-2022'
 
 variables:
-  project: 'XBRLConverter/XBRLConverter.csproj'
+  project: 'XBRLConverter/XBRLConverter/XBRLConverter.csproj'
   buildPlatform: 'Any CPU'
 
 steps:
