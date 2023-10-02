@@ -31,20 +31,13 @@ namespace XBRLConverter
                     return new BadRequestObjectResult("Request body cannot be empty");
                 }
                 TemplateOperation.ReplaceTemplateData(requestXml, template, log);
-
-                // prepare response
-                var outputPath = $"{Guid.NewGuid()}.xbrl";
-                SaveToXhtmlFile.Save(template, outputPath, log);
-                string xhtmlContent = File.ReadAllText(outputPath);
                 var response = new ContentResult
                 {
-                    Content = xhtmlContent,
-                    ContentType = "application/xhtml+xml", 
-                    StatusCode = 200
+                    Content = template.OuterXml,
+                    ContentType = "application/xhtml+xml", // Set the content type to XHTML
+                    StatusCode = 200 // Set the desired HTTP status code
                 };
-
                 return response;
-
             } catch (Exception ex)
             {
                 log.LogError(ex.Message);
