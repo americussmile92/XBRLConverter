@@ -32,7 +32,7 @@ public class SaveToXhtmlFile
         }
         catch (Exception ex)
         {
-            log.LogError("Cannot save document", ex);
+            log.LogError(ex.Message);
         }
     }
 }

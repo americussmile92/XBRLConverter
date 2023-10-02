@@ -47,7 +47,7 @@ namespace XBRLConverter
 
             } catch (Exception ex)
             {
-                log.LogError("Cannot generate XBRL file", ex);
+                log.LogError(ex.Message);
                 return new InternalServerErrorResult();
             }
             
