@@ -7,8 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Xml;
 using System.IO;
-using Newtonsoft.Json;
-using System.Collections.Generic;
+using System.Web.Http;
 
 namespace XBRLConverter
 {
@@ -16,52 +15,42 @@ namespace XBRLConverter
     {
         [FunctionName("XBRLConverterFunc")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "{templateId}")] HttpRequest req, string templateId,
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "xbrlconverter")] HttpRequest req,
             ILogger log,
             ExecutionContext context)
         {
-            // the request body needs to contains all the key similar to the tag in the xml template
-            log.LogInformation("Getting the template");
-            var template = GetTemplate(templateId, context);
-            if (template == null)
+            try
             {
-                return new BadRequestObjectResult($"Template {templateId} is not supported");
-            }
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            if (requestBody == null)
-            {
-                return new BadRequestObjectResult("Request body cannot be empty");
-            }
-            var data = JsonConvert.DeserializeObject<Dictionary<string, string>>(requestBody);
-
-            foreach (XmlElement item in template.ChildNodes[0].ChildNodes)
-            {
-                if (!data.ContainsKey(item.Name)) {
-                    return new BadRequestObjectResult($"Input data lack keys {item.Name}");
+                log.LogInformation("Getting the template");
+                var template = TemplateOperation.GetTemplate(context);
+                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                var requestXml = new XmlDocument();
+                requestXml.LoadXml(requestBody);
+                if (requestBody == null)
+                {
+                    return new BadRequestObjectResult("Request body cannot be empty");
                 }
-                var inputData = data[item.Name.ToString()];
-                item.InnerXml = inputData;
-            }
-            log.LogInformation("Returning the parsed XML");
-            return new ContentResult() { Content = template.InnerXml, ContentType = "text/xml" };
-        }
+                TemplateOperation.ReplaceTemplateData(requestXml, template, log);
 
-        public static XmlDocument GetTemplate(string templateId, ExecutionContext context)
-        {
-            XmlDocument doc = new XmlDocument();
-            string fileName = String.Empty;
-            switch (templateId.ToLower())
+                // prepare response
+                var outputPath = $"{Guid.NewGuid()}.xbrl";
+                SaveToXhtmlFile.Save(template, outputPath, log);
+                string xhtmlContent = File.ReadAllText(outputPath);
+                var response = new ContentResult
+                {
+                    Content = xhtmlContent,
+                    ContentType = "application/xhtml+xml", 
+                    StatusCode = 200
+                };
+
+                return response;
+
+            } catch (Exception ex)
             {
-                case "testtemplate":
-                    fileName = "testTemplate";
-                    break;
-                default:
-                    break;
+                log.LogError("Cannot generate XBRL file", ex);
+                return new InternalServerErrorResult();
             }
-            var templatePath = Path.Combine(context.FunctionAppDirectory, "Templates", $"{fileName}.xml");
-            if (String.IsNullOrEmpty(fileName)) return null;
-            doc.Load(templatePath);
-            return doc;
+            
         }
     }
 }
